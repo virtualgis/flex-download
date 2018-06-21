@@ -1,0 +1,24 @@
+{
+  "name": "flex-download",
+  "version": "1.0.0",
+  "description": "Download Viewer for Flex application configurations from public URLs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/virtualgis/flex-download.git"
+  },
+  "author": "Piero Toffanin",
+  "license": "AGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/virtualgis/flex-download/issues"
+  },
+  "homepage": "https://github.com/virtualgis/flex-download#readme",
+  "dependencies": {
+    "@rgrove/parse-xml": "^1.1.1",
+    "download": "^7.0.0",
+    "shelljs": "^0.8.2"
+  }
+}
