@@ -25,7 +25,7 @@ module.exports = {
             const dest = path.dirname(path.join(destination, urlToDownload.pathname.replace(new RegExp(`^${flexAppRootPath}`, "i"), "")));
             const filePath = path.join(dest, path.basename(urlToDownload.pathname));
 
-            if (verbose) console.log(`Downloading ${url.format(urlToDownload)} --> ${filePath}`);
+            if (verbose) console.log(`Downloading ${url.format(urlToDownload)}`);
 
             shelljs.mkdir('-p', dest);
             try{

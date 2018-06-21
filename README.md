@@ -10,9 +10,17 @@ Library to download Viewer for Flex application configurations from public URLs.
 
 ## Usage
 
+As a library:
+
 ```javascript
-const flexDownload = require('flex-download');
-flexDownload.download("https://myflexviewer.com/", 'path/to/folder').then(() => {
+const fd = require('flex-download');
+fd.download("https://myflexviewer.com/", 'destination/directory').then(() => {
     console.log("Done!");
 });
+```
+
+As a command line utility:
+
+```bash
+node fd.js <URL> <destination directory>
 ```
