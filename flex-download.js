@@ -28,12 +28,7 @@ module.exports = {
             if (verbose) console.log(`Downloading ${url.format(urlToDownload)}`);
 
             shelljs.mkdir('-p', dest);
-            try{
-                await download(url.format(urlToDownload), dest);
-            }catch(e){
-                console.error(e);
-                continue;
-            }
+            await download(url.format(urlToDownload), dest);
 
             // Parse
             if (path.extname(urlToDownload.pathname).toLowerCase() === '.xml'){
