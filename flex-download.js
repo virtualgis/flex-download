@@ -4,22 +4,65 @@ const shelljs = require('shelljs');
 const path = require('path');
 const url = require('url');
 const parseXml = require('@rgrove/parse-xml');
+const http = require('http');
+
+async function urlExists(host, port, path){
+    return new Promise(resolve => {
+        options = {method: 'HEAD', host: host, port: port, path: path},
+        req = http.request(options, function(r) {
+            resolve(r.statusCode === 200);
+        });
+        req.end();
+    });
+}
 
 module.exports = {
+    findConfigXml: async function(flexAppUrl){
+        let urlobj = new url.URL(flexAppUrl);
+        let baseUrl = urlobj.pathname.replace(/config\.xml$/, "");
+
+        let candidates = [
+            path.join(baseUrl, "config.xml")
+        ];
+
+        while(candidates[candidates.length - 1] !== '/config.xml'){
+            let lastEntry = candidates[candidates.length -1];
+            candidates.push(path.join(path.dirname(lastEntry), '..', 'config.xml'));
+        }
+
+        for (let i = 0; i < candidates.length; i++){
+            let candidatePath = candidates[i];
+            let port = 80;
+            if (urlobj.port) port = urlobj.port;
+            else if (urlobj.protocol === 'https') port = 443;
+
+            try{
+                if (await urlExists(urlobj.hostname, port, candidatePath)){
+                    urlobj.pathname = candidatePath;
+                    return urlobj.href;
+                }
+            }catch(e){
+                // Do nothing
+                continue;
+            }
+        }
+
+        return false;
+    },
+
     download: async function(flexAppUrl, destination, verbose = false){
         // TODO: handle redirects
 
-        if (flexAppUrl[flexAppUrl.length - 1] === "/") flexAppUrl = flexAppUrl.slice(0, flexAppUrl.length - 1);
-        
+        flexAppUrl = await this.findConfigXml(flexAppUrl);
+
         const flexAppRootUrl = path.dirname(flexAppUrl);
-        const flexAppRootPath = url.parse(flexAppRootUrl).pathname;
+        const flexAppRootPath = new url.URL(flexAppRootUrl).pathname;
 
         const urlsToDownload = [`${flexAppRootUrl}/config.xml`];
         const downloadedUrls = {};
-        downloadedUrls[urlsToDownload[0]] = true;
-
+        
         while(urlsToDownload.length > 0){
-            const urlToDownload = url.parse(urlsToDownload.pop());
+            const urlToDownload = new url.URL(urlsToDownload.pop());
 
             // URL to directory
             const dest = path.dirname(path.join(destination, urlToDownload.pathname.replace(new RegExp(`^${flexAppRootPath}`, "i"), "")));
@@ -28,7 +71,14 @@ module.exports = {
             if (verbose) console.log(`Downloading ${url.format(urlToDownload)}`);
 
             shelljs.mkdir('-p', dest);
-            await download(url.format(urlToDownload), dest);
+            try{
+                await download(url.format(urlToDownload), dest);
+            }catch(e){
+                if (verbose) console.error("Cannot download " + urlToDownload + ", skipping");
+                continue;
+            }
+
+            downloadedUrls[urlToDownload] = true;
 
             // Parse
             if (path.extname(urlToDownload.pathname).toLowerCase() === '.xml'){
@@ -79,5 +129,7 @@ module.exports = {
         }
 
         if (verbose) console.log(`No more files.`);
+
+        if (Object.keys(downloadedUrls).length === 0) throw new Error("Could not find a config.xml file");
     }
 };
