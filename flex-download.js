@@ -53,9 +53,10 @@ module.exports = {
     download: async function(flexAppUrl, destination, verbose = false){
         // TODO: handle redirects
 
-        flexAppUrl = await this.findConfigXml(flexAppUrl);
+        let configXmlUrl = await this.findConfigXml(flexAppUrl);
+        if (!configXmlUrl) throw new Error("Could not find a config.xml file in " + flexAppUrl);
 
-        const flexAppRootUrl = path.dirname(flexAppUrl);
+        const flexAppRootUrl = path.dirname(configXmlUrl);
         const flexAppRootPath = new url.URL(flexAppRootUrl).pathname;
 
         const urlsToDownload = [`${flexAppRootUrl}/config.xml`];
@@ -130,6 +131,6 @@ module.exports = {
 
         if (verbose) console.log(`No more files.`);
 
-        if (Object.keys(downloadedUrls).length === 0) throw new Error("Could not find a config.xml file");
+        if (Object.keys(downloadedUrls).length === 0) throw new Error("Could not find a config.xml file in " + flexAppUrl);
     }
 };
