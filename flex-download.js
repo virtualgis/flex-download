@@ -54,7 +54,7 @@ module.exports = {
         // TODO: handle redirects
 
         let configXmlUrl = await this.findConfigXml(flexAppUrl);
-        if (!configXmlUrl) throw new Error("Could not find a config.xml file in " + flexAppUrl);
+        if (!configXmlUrl) throw new Error("Could not find a config.xml file at the URL: " + flexAppUrl);
 
         const flexAppRootUrl = path.dirname(configXmlUrl);
         const flexAppRootPath = new url.URL(flexAppRootUrl).pathname;
