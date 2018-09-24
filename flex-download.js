@@ -17,6 +17,29 @@ async function urlExists(host, port, path){
 }
 
 module.exports = {
+    attemptToFixCommonXmlErrors: function(xml){
+        // Yeah :/, Viewer for Flex does not care about non-compliant XML
+        // and users don't either.
+
+        // Replace & characters in fields that we know are URLs
+        // into &amp (valid XML).
+        xml = xml.replace(/<linkurl>([^<]*?)<\/linkurl>/gi, 
+        function(match, p1){
+            return "<linkurl>" + 
+                p1.replace(/&amp;/g, "&").replace(/&/g, "&amp;") +
+                "</linkurl>";
+        });
+
+        // Replace & characters in fields that we know are URLs
+        // into &amp (valid XML).
+        xml = xml.replace(/([\w]*?)\s?=\s?"([^"]*?)"/gi, 
+            function(match, p1, p2){
+                return ` ${p1}="${p2.replace(/&amp;/g, "&").replace(/&/g, "&amp;")}" `; 
+            });
+
+        return xml;
+    },
+
     findConfigXml: async function(flexAppUrl){
         let urlobj = new url.URL(flexAppUrl);
         let baseUrl = urlobj.pathname.replace(/config\.xml$/, "");
@@ -50,7 +73,10 @@ module.exports = {
         return false;
     },
 
-    download: async function(flexAppUrl, destination, verbose = false){
+    download: async function(flexAppUrl, destination, options = {}){
+        options.verbose = options.verbose !== undefined ? options.verbose : false;
+        options.strictXml = options.strictXml !== undefined ? options.strictXml : false;
+        
         // TODO: handle redirects
 
         let configXmlUrl = await this.findConfigXml(flexAppUrl);
@@ -69,13 +95,13 @@ module.exports = {
             const dest = path.dirname(path.join(destination, urlToDownload.pathname.replace(new RegExp(`^${flexAppRootPath}`, "i"), "")));
             const filePath = path.join(dest, path.basename(urlToDownload.pathname));
 
-            if (verbose) console.log(`Downloading ${url.format(urlToDownload)}`);
+            if (options.verbose) console.log(`Downloading ${url.format(urlToDownload)}`);
 
             shelljs.mkdir('-p', dest);
             try{
                 await download(url.format(urlToDownload), dest);
             }catch(e){
-                if (verbose) console.error("Cannot download " + urlToDownload + ", skipping");
+                if (options.verbose) console.error("Cannot download " + urlToDownload + ", skipping");
                 continue;
             }
 
@@ -84,15 +110,25 @@ module.exports = {
             // Parse
             if (path.extname(urlToDownload.pathname).toLowerCase() === '.xml'){
                 
-                if (verbose) console.log(`Parsing ${filePath}`);
+                if (options.verbose) console.log(`Parsing ${filePath}`);
 
-                const fileContent = fs.readFileSync(filePath, {encoding: 'utf8'}).trim();
+                let fileContent = fs.readFileSync(filePath, {encoding: 'utf8'}).trim();
                 let xmlDoc;
                 try{
                     xmlDoc = parseXml(fileContent);
                 }catch(e){
-                    console.error(`Invalid XML: ${filePath} ${e}`);
-                    continue;
+                    if (!options.strictXml){
+                        fileContent = this.attemptToFixCommonXmlErrors(fileContent);
+                        try{
+                            xmlDoc = parseXml(fileContent);
+                        }catch(e){
+                            console.error(`Invalid XML (even after fixing for common errors): ${filePath} ${e}`);
+                            continue;
+                        }
+                    }else{
+                        console.error(`Invalid XML: ${filePath} ${e}`);
+                        continue;
+                    }
                 }
 
                 const scanForFile = (str) => {
@@ -129,7 +165,7 @@ module.exports = {
             }
         }
 
-        if (verbose) console.log(`No more files.`);
+        if (options.verbose) console.log(`No more files.`);
 
         if (Object.keys(downloadedUrls).length === 0) throw new Error("Could not find a config.xml file in " + flexAppUrl);
     }
