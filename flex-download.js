@@ -52,13 +52,13 @@ module.exports = {
             let lastEntry = candidates[candidates.length -1];
             candidates.push(path.join(path.dirname(lastEntry), '..', 'config.xml'));
         }
-
+        
         for (let i = 0; i < candidates.length; i++){
             let candidatePath = candidates[i];
             let port = 80;
             if (urlobj.port) port = urlobj.port;
-            else if (urlobj.protocol === 'https') port = 443;
-
+            else if (urlobj.protocol.indexOf('https') === 0) port = 443;
+            
             try{
                 if (await urlExists(urlobj.hostname, port, candidatePath)){
                     urlobj.pathname = candidatePath;
